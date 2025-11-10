@@ -381,26 +381,55 @@ plt.show()
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
+#Import Libraries - 9
+#Data Preprocessing - 2
+#Sample Corpus - data
+#Tokenization - 3
+#Mapping Each word to Integers - 3
+#Sentence to Sequence of Word IDs - 3
+#3+2
+#Generate context word pairs
+#Build Training Dataset
+#Define CBOW
+#Model Training
+#Extract Word Embedding 
+#Similarity Query
 
 
-# Import Libraries
+
+# Import Libraries - 9
 import pandas as pd
 import numpy as np
-import nltk
-from nltk.corpus import stopwords
 from tensorflow.keras.preprocessing import text
 from tensorflow.keras.utils import to_categorical, pad_sequences
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Embedding, Lambda, Input
+from tensorflow.keras.layers import Dense, Input, Embedding, Lambda
 from tensorflow.keras.callbacks import EarlyStopping
 import tensorflow.keras.backend as K
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Data Preprocessing
-nltk.download('stopwords')
-stop_words = set(stopwords.words('english'))
+# Data Preprocessing - 2
+# OFFLINE STOPWORDS (common English stopwords) - no internet required
+stop_words = {
+    'a','about','above','after','again','against','all','am','an','and','any','are','as','at',
+    'be','because','been','before','being','below','between','both','but','by',
+    'could','did','do','does','doing','down','during',
+    'each',
+    'few','for','from','further',
+    'had','has','have','having','he','her','here','hers','herself','him','himself','his','how',
+    'i','if','in','into','is','it','its','itself',
+    'me','more','most','my','myself',
+    'no','nor','not',
+    'of','off','on','once','only','or','other','ought','our','ours','ourselves','out','over','own',
+    'same','she','should','so','some','such',
+    'than','that','the','their','theirs','them','themselves','then','there','these','they','this','those','through','to',
+    'under','until','up',
+    'very',
+    'was','we','were','what','when','where','which','while','who','whom','why','with','would',
+    'you','your','yours','yourself','yourselves'
+}
 
-# Sample corpus
+# Sample Corpus - data
 data = [
     "Artificial intelligence and machine learning are transforming the modern world.",
     "Deep learning models can recognize images, understand speech, and generate text.",
@@ -409,51 +438,52 @@ data = [
     "Cloud computing enables scalable and efficient AI processing."
 ]
 
-# Tokenization (removing stopwords + lowercase)
+# Tokenization - 3
 tokenizer = text.Tokenizer()
 tokenizer.fit_on_texts(
     [[w.lower() for w in text.text_to_word_sequence(doc) if w.lower() not in stop_words] for doc in data]
 )
 
-# Mapping words to integers
+# Mapping Each word to Integers - 3
 word2id = tokenizer.word_index
 word2id['PAD'] = 0
-id2word = {v: k for k, v in word2id.items()}
+id2word = {v : k for k , v in word2id.items()}
 
-# Convert sentences to sequences of word IDs
+# Sentence to Sequence of Word IDs - 3
 wids = [
     [word2id.get(w.lower(), word2id['PAD']) for w in text.text_to_word_sequence(doc) if w.lower() not in stop_words]
     for doc in data
 ]
 
+# 3+2
 vocab_size = len(word2id)
 embed_size = 100
 window_size = 2
 print("Vocabulary Size:", vocab_size)
 print("Sample Vocabulary:", list(word2id.items())[:10])
 
-# Generate Context-Word Pairs (CBOW)
-def generate_context_word_pairs(corpus, window_size, vocab_size):
+# Generate context word pairs
+def generate_context_word_pairs(corpus,window_size,vocab_size):
     context_len = window_size * 2
     for words in corpus:
         for i, word in enumerate(words):
-            start, end = max(0, i - window_size), min(len(words), i + window_size + 1)
-            context = [words[j] for j in range(start, end) if j != i]
-            x = pad_sequences([context], maxlen=context_len)
+            start, end = max(0,i-window_size),min(len(words),i+window_size+1)
+            context =[words[j] for j in range(start,end) if j!=i]
+            x = pad_sequences([context],maxlen=context_len)
             y = to_categorical([word], vocab_size)
-            yield (x, y)
+            yield(x,y)
 
-# Build training dataset
+# Build Training Dataset
 i = 0
-for x, y in generate_context_word_pairs(wids, window_size, vocab_size):
+for x,y in generate_context_word_pairs(wids,window_size,vocab_size):
     if 0 not in x[0]:
-        print("Context (X):", [id2word[w] for w in x[0]], "-> Target (Y):", id2word[np.argmax(y[0])])
-        i += 1
-        if i == 5:
+        print("Context (X): ", [id2word[w] for w in x[0]], " ->Target (Y):",id2word[np.argmax(y[0])])
+        i+=1
+        if i==5:
             break
 
-X, Y = [], []
-for x, y in generate_context_word_pairs(wids, window_size, vocab_size):
+X , Y = [], []
+for x, y in generate_context_word_pairs(wids,window_size,vocab_size):
     X.append(x[0])
     Y.append(y[0])
 
@@ -462,24 +492,24 @@ Y = np.array(Y)
 
 print("Training Data Shape:", X.shape, Y.shape)
 
-# Define CBOW Model
+# Define CBOW
 cbow = Sequential([
     Input(shape=(window_size*2,)),
-    Embedding(input_dim=vocab_size, output_dim=embed_size),
-    Lambda(lambda x: K.mean(x, axis=1)),
-    Dense(vocab_size, activation='softmax')
+    Embedding(input_dim = vocab_size, output_dim = embed_size),
+    Lambda(lambda x: K.mean(x,axis=1)),
+    Dense(vocab_size,activation='softmax')
 ])
 
-cbow.compile(loss='categorical_crossentropy', optimizer='adam')
+cbow.compile(loss='categorical_crossentropy',optimizer='adam')
 print(cbow.summary())
 
 # Model Training
-early_stop = EarlyStopping(monitor='loss', patience=3, restore_best_weights=True)
-cbow.fit(X, Y, epochs=50, batch_size=32, verbose=2, callbacks=[early_stop])
+early_stop = EarlyStopping(monitor='loss', patience=3, restore_best_weights = True)
+cbow.fit(X,Y,epochs=50, batch_size=32, verbose=2,callbacks=[early_stop])
 
-# Extract Word Embeddings
+# Extract Word Embedding 
 weights = cbow.get_weights()[0][1:len(id2word)]
-embeddings = pd.DataFrame(weights, index=[id2word[i] for i in range(1, len(id2word))])
+embeddings = pd.DataFrame(weights,index=[id2word[i] for i in range(1,len(id2word))])
 print(embeddings.head())
 
 # Similarity Query
