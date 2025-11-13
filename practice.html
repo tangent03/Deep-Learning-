@@ -384,5 +384,125 @@ print("Similar Words:", similar)
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
+assignemtn - 3 (CNN) alt code
 
+ # 1. Import Required Libraries
+import numpy as np
+import matplotlib.pyplot as plt
+import random
+from tensorflow.keras import layers, models
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.preprocessing.image import ImageDataGenerator, array_to_img
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.optimizers import Adam
+
+# 2. Load and Preprocess CIFAR-10 Data
+data = np.load('cifar-10.npz')
+x_train, y_train, x_test, y_test = [data[key] for key in ["x_train", "y_train", "x_test", "y_test"]]
+print("Training samples:", x_train.shape[0])
+print("Test samples:", x_test.shape[0])
+
+# Normalize pixel values (0–255 → 0–1)
+mx = x_train.max().astype(np.float64)
+x_train, x_test = x_train / mx, x_test / mx
+
+# One-hot encode labels (10 output classes)
+y_train_cat = to_categorical(y_train, 10)
+y_test_cat  = to_categorical(y_test, 10)
+
+# 3. Data Augmentation
+datagen = ImageDataGenerator(
+    rotation_range=20,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    horizontal_flip=True,
+    zoom_range=0.1
+)
+datagen.fit(x_train)
+
+# 4. Visualize Augmented Samples
+augmented_images, augmented_labels = next(datagen.flow(x_train, y_train, batch_size=10))
+class_names = ['airplane','automobile','bird','cat','deer','dog','frog','horse','ship','truck']
+
+plt.figure(figsize=(10, 10))
+for i in range(10):
+    plt.subplot(2,5,i+1)
+    img = array_to_img(augmented_images[i], scale=True).resize((128,128))
+    plt.imshow(img)
+    plt.title(class_names[int(augmented_labels[i])])
+    plt.axis("off")
+plt.suptitle("Augmented Image Samples", fontsize=16)
+plt.show()
+
+# 5. Build CNN Model
+model = models.Sequential([
+    layers.Input(shape=(32, 32, 3)),
+
+    layers.Conv2D(32, (3, 3), activation='relu', padding='same'),
+    layers.BatchNormalization(),
+    layers.MaxPooling2D(2, 2),
+    layers.Dropout(0.25),
+
+    layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
+    layers.BatchNormalization(),
+    layers.MaxPooling2D(2, 2),
+    layers.Dropout(0.25),
+
+    layers.Conv2D(128, (3, 3), activation='relu', padding='same'),
+    layers.BatchNormalization(),
+    layers.Flatten(),
+
+    layers.Dense(128, activation='relu'),
+    layers.Dropout(0.5),
+    layers.Dense(10, activation='softmax')
+])
+
+model.summary()
+
+# 6. Compile Model
+model.compile(optimizer=Adam(learning_rate=0.001),
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+
+# 7. Train Model
+early_stop = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+
+history = model.fit(
+    datagen.flow(x_train, y_train_cat, batch_size=64),
+    validation_data=(x_test, y_test_cat),
+    epochs=50,
+    callbacks=[early_stop],
+    verbose=1
+)
+
+# 8. Evaluate Model
+train_loss, train_acc = model.evaluate(x_train, y_train_cat, verbose=0)
+test_loss, test_acc = model.evaluate(x_test, y_test_cat, verbose=0)
+print(f"Train Accuracy: {train_acc:.3f}, Test Accuracy: {test_acc:.3f}")
+
+# 9. Plot Performance Graphs
+plt.plot(history.history["accuracy"], label="Train Accuracy")
+plt.plot(history.history["val_accuracy"], label="Validation Accuracy")
+plt.title("Model Accuracy Over Epochs")
+plt.xlabel("Epochs")
+plt.ylabel("Accuracy")
+plt.legend()
+plt.show()
+
+plt.plot(history.history["loss"], label="Train Loss")
+plt.plot(history.history["val_loss"], label="Validation Loss")
+plt.title("Model Loss Over Epochs")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.legend()
+plt.show()
+
+# 10. Random Prediction Visualization
+predictions = model.predict(x_test)
+index = random.randint(0, len(x_test)-1)
+plt.figure(figsize=(5,5))
+plt.imshow(x_test[index])
+plt.axis("off")
+plt.title(f"Predicted: {class_names[np.argmax(predictions[index])]} | True: {class_names[np.argmax(y_test_cat[index])]}")
+plt.show()
     
