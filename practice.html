@@ -1,4 +1,85 @@
-# --- Import Required Libraries ---
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+import random
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Flatten, Dense
+from tensorflow.keras.callbacks import EarlyStopping
+
+# Load Dataset
+data = np.load('mnist.npz')
+x_train = data['x_train']
+y_train = data['y_train']
+x_test  = data['x_test']
+y_test  = data['y_test']
+
+# Normalization (divide by dataset max)
+mx = x_train.max().astype(np.float32)
+x_train = x_train / mx
+x_test  = x_test / mx
+plt.matshow(x_train[0])
+
+# Build Model
+model = Sequential([
+    Flatten(input_shape=(28, 28)),
+    Dense(128, activation='relu'),
+    Dense(10, activation='softmax')
+])
+model.summary()
+
+# Compile Model
+model.compile(optimizer='sgd',
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
+
+# EarlyStopping callback
+es = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+
+# Train Model (with EarlyStopping)
+history = model.fit(x_train, y_train,
+                    epochs=5,                # increase epochs since ES will stop earlier if needed
+                    validation_data=(x_test, y_test),
+                    callbacks=[es],
+                    verbose=1)
+
+# Evaluate Model
+test_loss, test_acc = model.evaluate(x_test, y_test)
+print("Test Accuracy:", test_acc)
+print("Test loss:", test_loss)
+
+# Prediction on random image
+n = random.randint(0, len(x_test) - 1)
+plt.imshow(x_test[n])
+plt.axis('off')
+plt.show()
+
+predicted_value = model.predict(x_test)
+print("Handwritten Number in the image is %d" % np.argmax(predicted_value[n]))
+
+# Plot Loss and Accuracy
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.plot(history.history['val_accuracy'], label='Val Accuracy')
+plt.title('Model Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show()
+
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Val Loss')
+plt.title('Model Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.show()
+
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#Import Libraries
 import numpy as np
 import matplotlib.pyplot as plt
 import random
@@ -8,37 +89,38 @@ from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.image import resize
 
-# --- Load CIFAR-10 Dataset ---
-data = np.load('cifar-10.npz')
-x_train, y_train = data['x_train'], data['y_train']
-x_test, y_test = data['x_test'], data['y_test']
 
-# --- Normalize Pixel Values (0–1 range for faster convergence) ---
+#Load CIFAR-10 Dataset
+data  = np.load('cifar-10.npz')
+x_train,y_train = data['x_train'],data['y_train']
+x_test, y_test = data['x_test'],data['y_test']
+
+#Normalize Pixel Value(0-1 range for faster convergence)
 mx = x_train.max().astype(np.float64)
-x_train, x_test = x_train / mx, x_test / mx
+x_train, x_test = x_train/mx, x_test/mx
 
-# --- Convert Class Labels into One-Hot Encoding ---
-y_train = keras.utils.to_categorical(y_train, 10)
-y_test = keras.utils.to_categorical(y_test, 10)
+#Conver class labels into one hot encoding
+y_train = keras.utils.to_categorical(y_train,10)
+y_test = keras.utils.to_categorical(y_test,10)
 
 print("x_train shape:", x_train.shape)
 print("y_train shape:", y_train.shape)
 
-# --- Model Architecture (Feedforward Neural Network) ---
+#Model Architecture FNN
 model = keras.Sequential([
-    layers.Flatten(input_shape=(32, 32, 3)),    # Flatten image into 1D vector
-    layers.Dense(512, activation="relu"),       # Hidden Layer 1
-    layers.Dense(256, activation="relu"),       # Hidden Layer 2
-    layers.Dense(128, activation="relu"),       # Hidden Layer 3
-    layers.Dense(10, activation="softmax")      # Output Layer (10 classes)
+    layers.Flatten(input_shape=(32,32,3)),
+    layers.Dense(512,activation="relu"),
+    layers.Dense(256,activation="relu"),
+    layers.Dense(128,activation="relu"),
+    layers.Dense(10,activation="softmax")
 ])
 
-# --- Compile Model ---
-sgd = SGD(learning_rate=0.01, momentum=0.9)
-model.compile(optimizer=sgd, loss="categorical_crossentropy", metrics=["accuracy"])
+#compile.model
+sgd = SGD(learning_rate=0.01 , momentum=0.9)
+model.compile(optimizer=sgd,loss="categorical_crossentropy",metrics=["accuracy"])
 model.summary()
 
-# --- Early Stopping to Prevent Overfitting ---
+#Early Stopping
 es = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
 
 # --- Train the Model ---
@@ -92,438 +174,213 @@ plt.show()
 predicted_value = model.predict(x_test, verbose=0)
 print("Predicted label =", class_names[np.argmax(predicted_value[n])])
 print("True label =", class_names[np.argmax(y_test[n])])
-
-
-
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-# 1. Import Required Libraries
-import numpy as np
-import matplotlib.pyplot as plt
-import random
-from tensorflow.keras import layers, models
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.preprocessing.image import ImageDataGenerator, array_to_img
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.optimizers import Adam
-
-# 2. Load and Preprocess CIFAR-10 Data
-data = np.load('cifar-10.npz')
-x_train, y_train, x_test, y_test = [data[key] for key in ["x_train", "y_train", "x_test", "y_test"]]
-print("Training samples:", x_train.shape[0])
-print("Test samples:", x_test.shape[0])
-
-# Normalize pixel values (0–255 → 0–1)
-mx = x_train.max().astype(np.float64)
-x_train, x_test = x_train / mx, x_test / mx
-
-# One-hot encode labels (10 output classes)
-y_train_cat = to_categorical(y_train, 10)
-y_test_cat  = to_categorical(y_test, 10)
-
-# 3. Data Augmentation
-datagen = ImageDataGenerator(
-    rotation_range=20,
-    width_shift_range=0.1,
-    height_shift_range=0.1,
-    horizontal_flip=True,
-    zoom_range=0.1
-)
-datagen.fit(x_train)
-
-# 4. Visualize Augmented Samples
-augmented_images, augmented_labels = next(datagen.flow(x_train, y_train, batch_size=10))
-class_names = ['airplane','automobile','bird','cat','deer','dog','frog','horse','ship','truck']
-
-plt.figure(figsize=(10, 10))
-for i in range(10):
-    plt.subplot(2,5,i+1)
-    img = array_to_img(augmented_images[i], scale=True).resize((128,128))
-    plt.imshow(img)
-    plt.title(class_names[int(augmented_labels[i])])
-    plt.axis("off")
-plt.suptitle("Augmented Image Samples", fontsize=16)
-plt.show()
-
-# 5. Build CNN Model
-model = models.Sequential([
-    layers.Input(shape=(32, 32, 3)),
-
-    layers.Conv2D(32, (3, 3), activation='relu', padding='same'),
-    layers.BatchNormalization(),
-    layers.MaxPooling2D(2, 2),
-    layers.Dropout(0.25),
-
-    layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
-    layers.BatchNormalization(),
-    layers.MaxPooling2D(2, 2),
-    layers.Dropout(0.25),
-
-    layers.Conv2D(128, (3, 3), activation='relu', padding='same'),
-    layers.BatchNormalization(),
-    layers.Flatten(),
-
-    layers.Dense(128, activation='relu'),
-    layers.Dropout(0.5),
-    layers.Dense(10, activation='softmax')
-])
-
-model.summary()
-
-# 6. Compile Model
-model.compile(optimizer=Adam(learning_rate=0.001),
-              loss='categorical_crossentropy',
-              metrics=['accuracy'])
-
-# 7. Train Model
-early_stop = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
-
-history = model.fit(
-    datagen.flow(x_train, y_train_cat, batch_size=64),
-    validation_data=(x_test, y_test_cat),
-    epochs=50,
-    callbacks=[early_stop],
-    verbose=1
-)
-
-# 8. Evaluate Model
-train_loss, train_acc = model.evaluate(x_train, y_train_cat, verbose=0)
-test_loss, test_acc = model.evaluate(x_test, y_test_cat, verbose=0)
-print(f"Train Accuracy: {train_acc:.3f}, Test Accuracy: {test_acc:.3f}")
-
-# 9. Plot Performance Graphs
-plt.plot(history.history["accuracy"], label="Train Accuracy")
-plt.plot(history.history["val_accuracy"], label="Validation Accuracy")
-plt.title("Model Accuracy Over Epochs")
-plt.xlabel("Epochs")
-plt.ylabel("Accuracy")
-plt.legend()
-plt.show()
-
-plt.plot(history.history["loss"], label="Train Loss")
-plt.plot(history.history["val_loss"], label="Validation Loss")
-plt.title("Model Loss Over Epochs")
-plt.xlabel("Epochs")
-plt.ylabel("Loss")
-plt.legend()
-plt.show()
-
-# 10. Random Prediction Visualization
-predictions = model.predict(x_test)
-index = random.randint(0, len(x_test)-1)
-plt.figure(figsize=(5,5))
-plt.imshow(x_test[index])
-plt.axis("off")
-plt.title(f"Predicted: {class_names[np.argmax(predictions[index])]} | True: {class_names[np.argmax(y_test_cat[index])]}")
-plt.show()
-
-
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
-# Import required libraries
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import confusion_matrix, classification_report, f1_score, precision_score, recall_score
-from tensorflow.keras import layers, models
-from tensorflow.keras.callbacks import EarlyStopping
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+import tensorflow as tf
+from tensorflow.keras import layers, models, optimizers
+from imblearn.over_sampling import SMOTE
 
-# STEP 1: Load and Preprocess Data
-df = pd.read_csv('ecg.csv', header=None)
 
-# Separate features (X) and labels (y)
-X = df.iloc[:, :-1].values
-y = df.iloc[:, -1].values
 
-# Normalize data for better model convergence
-scaler = StandardScaler()
-X = scaler.fit_transform(X)
+data = pd.read_csv("ecg.csv")
+print(f"Shape: {data.shape}")
+print(f"Target column: {data.columns[-1]}")
+X, y = data.iloc[:, :-1], data.iloc[:, -1]
 
-# Split dataset (80% training, 20% testing)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-
-# Train only on normal ECGs
-X_train_normal = X_train[y_train == 1]
-input_dim = X_train_normal.shape[1]
-
-# -----------------------------
-# STEP 2: Define Autoencoder
-# -----------------------------
-encoder = models.Sequential([
-    layers.Input(shape=(input_dim,)),
-    layers.Dense(32, activation='relu'),
-    layers.Dense(16, activation='relu'),
-    layers.Dense(8, activation='relu')   # Compressed latent space
-])
-
-decoder = models.Sequential([
-    layers.Dense(16, activation='relu'),
-    layers.Dense(32, activation='relu'),
-    layers.Dense(input_dim, activation='linear')  # Reconstructs input
-])
-
-autoencoder = models.Sequential([encoder, decoder])
-autoencoder.compile(optimizer='adam', loss='mse')
-autoencoder.summary()
-
-# STEP 3: Model Training
-
-early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
-
-history = autoencoder.fit(
-    X_train_normal, X_train_normal,
-    epochs=100, batch_size=32,
-    shuffle=True,
-    validation_data=(X_test, X_test),
-    callbacks=[early_stopping],
-    verbose=2
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42
 )
 
-# STEP 4: Reconstruction and Anomaly Detection
-y_pred = autoencoder.predict(X_test, verbose=0)
-mse = np.mean(np.power(X_test - y_pred, 2), axis=1)
+sm = SMOTE(random_state=42)
+X_train_bal, y_train_bal = sm.fit_resample(X_train, y_train)
 
-def find_optimal_threshold(y_true, mse_test):
-    thresholds = np.linspace(mse_test.min(), mse_test.max(), 100)
-    best_f1, optimal_threshold = 0, 0
-    for t in thresholds:
-        y_pred_t = np.where(mse_test > t, 0, 1)
-        f1 = f1_score(y_true, y_pred_t, pos_label=0)
-        if f1 > best_f1:
-            best_f1, optimal_threshold = f1, t
-    return optimal_threshold, best_f1
+print("Before SMOTE:", np.bincount(y_train))
+print("After SMOTE :", np.bincount(y_train_bal))
 
-threshold, best_f1 = find_optimal_threshold(y_test, mse)
-anomalies = mse > threshold
-y_pred_class = np.where(anomalies, 0, 1)
+sns.countplot(x=y)
+plt.title("Class Distribution (0 = Normal, 1 = Anomaly)")
+plt.show()
+scaler = MinMaxScaler()
+X_train_scaled = scaler.fit_transform(X_train_bal)
+X_test_scaled  = scaler.transform(X_test)
 
-print(f"\nOptimal Threshold: {threshold:.6f}")
-print(f"Best F1 Score: {best_f1:.4f}")
-print(f"Predicted Anomalies: {np.sum(anomalies)}")
+print(f"Training dataset shape: {X_train_scaled.shape}, Testing dataset shape: {X_test_scaled.shape}")
 
-# STEP 5: Visualization
-plt.figure(figsize=(10, 5))
-plt.plot(history.history['loss'], label='Train Loss')
-plt.plot(history.history['val_loss'], label='Validation Loss')
-plt.title('Model Loss per Epoch')
-plt.xlabel('Epoch')
-plt.ylabel('MSE')
+input_dim = X_train_scaled.shape[1]
+print(f"Input dimension: {input_dim}")
+autoencoder = models.Sequential([
+    layers.Input(shape=(input_dim,)),
+
+    # Encoder
+    layers.Dense(128, activation="relu"),
+    layers.Dense(64, activation="relu"),
+    layers.Dense(16, activation="tanh"),
+
+    # Decoder
+    layers.Dense(64, activation="relu"),
+    layers.Dense(128, activation="relu"),
+    layers.Dense(input_dim, activation="sigmoid")  
+])
+autoencoder.compile(
+    optimizer="adam",
+    loss="mse",
+    metrics=["mae"]
+)
+
+autoencoder.summary()
+history = autoencoder.fit(
+    X_train_scaled, X_train_scaled,
+    validation_data=(X_test_scaled, X_test_scaled),
+    epochs=25, batch_size=256, verbose=1
+)
+
+plt.plot(history.history["loss"], label="Train")
+plt.plot(history.history["val_loss"], label="Val")
+plt.xlabel("Epochs")
+plt.ylabel("MSE Loss")
+plt.title("Training vs Validation Loss")
 plt.legend()
 plt.show()
 
-plt.figure(figsize=(12, 6))
-plt.plot(mse, 'bo', markersize=3, label='Reconstruction Error')
-plt.axhline(threshold, color='red', linestyle='--', label=f'Threshold ({threshold:.6f})')
-plt.title('ECG Anomaly Detection')
-plt.xlabel('Sample Index')
-plt.ylabel('MSE')
-plt.legend()
-plt.show()
 
-# Normal vs Anomalous Reconstruction
-normal_idx = np.where(anomalies == False)[0][0]
-anomaly_idx = np.where(anomalies == True)[0][0]
+# Predictions
+X_train_pred = autoencoder.predict(X_train_scaled)
+X_test_pred  = autoencoder.predict(X_test_scaled)
 
-plt.figure(figsize=(10, 5))
-plt.plot(X_test[normal_idx], label='Original Normal')
-plt.plot(y_pred[normal_idx], label='Reconstructed')
-plt.legend()
-plt.title('Normal ECG Reconstruction')
-plt.show()
+# Reconstruction error (MSE per sample)
+train_errors = np.mean((X_train_scaled - X_train_pred) ** 2, axis=1)
+test_errors  = np.mean((X_test_scaled - X_test_pred) ** 2, axis=1)
 
-plt.figure(figsize=(10, 5))
-plt.plot(X_test[anomaly_idx], label='Original Abnormal')
-plt.plot(y_pred[anomaly_idx], label='Reconstructed')
-plt.legend()
-plt.title('Anomaly ECG Reconstruction')
-plt.show()
+# Anomaly threshold
+threshold = train_errors.mean() + train_errors.std()
+print(f"Reconstruction Threshold: {threshold:.4f}")
+# Predict anomalies
+y_pred = (test_errors > threshold).astype(int)
 
-# STEP 6: Evaluation
-cm = confusion_matrix(y_test, y_pred_class)
-y_true = y_test
-precision_0 = precision_score(y_true, y_pred_class, pos_label=0)
-recall_0 = recall_score(y_true, y_pred_class, pos_label=0)
-f1_0 = f1_score(y_true, y_pred_class, pos_label=0)
+# Accuracy
+acc = accuracy_score(y_test, y_pred)
+print(f"Accuracy: {acc:.2f}")
 
-precision_1 = precision_score(y_true, y_pred_class, pos_label=1)
-recall_1 = recall_score(y_true, y_pred_class, pos_label=1)
-f1_1 = f1_score(y_true, y_pred_class, pos_label=1)
+# Precision
+precision = precision_score(y_test, y_pred)
+print(f"Precision: {precision:.2f}")
 
-print("Class 0 (Abnormal):")
-print(f"  Precision: {precision_0:.4f}")
-print(f"  Recall:    {recall_0:.4f}")
-print(f"  F1 Score:  {f1_0:.4f}\n")
+# Recall
+recall = recall_score(y_test, y_pred)
+print(f"Recall: {recall:.2f}")
 
-print("Class 1 (Normal):")
-print(f"  Precision: {precision_1:.4f}")
-print(f"  Recall:    {recall_1:.4f}")
-print(f"  F1 Score:  {f1_1:.4f}\n")
+# F1 Score
+f1 = f1_score(y_test, y_pred)
+print(f"F1 Score: {f1:.2f}")
 
-weighted_f1 = f1_score(y_true, y_pred_class, average="weighted")
-
-print(f"Weighted Avg F1:  {weighted_f1:.4f}")
-print("\nClassification Report:\n", classification_report(y_test, y_pred_class))
-
-sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-            xticklabels=['Abnormal (0)', 'Normal (1)'],
-            yticklabels=['Abnormal (0)', 'Normal (1)'])
-plt.title('Confusion Matrix')
-plt.xlabel('Predicted')
-plt.ylabel('Actual')
+# Confusion Matrix
+cm = confusion_matrix(y_test, y_pred)
+sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
+plt.title("Confusion Matrix")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
 plt.show()
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
-#Import Libraries - 9
-#Data Preprocessing - 2
-#Sample Corpus - data
-#Tokenization - 3
-#Mapping Each word to Integers - 3
-#Sentence to Sequence of Word IDs - 3
-#3+2
-#Generate context word pairs
-#Build Training Dataset
-#Define CBOW
-#Model Training
-#Extract Word Embedding 
-#Similarity Query
-
-
-
-# Import Libraries - 9
-import pandas as pd
+#import libraries
 import numpy as np
-from tensorflow.keras.preprocessing import text
-from tensorflow.keras.utils import to_categorical, pad_sequences
+import pandas as pd
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Input, Embedding, Lambda
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import Dense, Lambda, Embedding
+from tensorflow.keras.utils import to_categorical, pad_sequences
+from tensorflow.keras.preprocessing import text, sequence
 import tensorflow.keras.backend as K
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import euclidean_distances
 
-# Data Preprocessing - 2
-# OFFLINE STOPWORDS (common English stopwords) - no internet required
-stop_words = {
-    'a','about','above','after','again','against','all','am','an','and','any','are','as','at',
-    'be','because','been','before','being','below','between','both','but','by',
-    'could','did','do','does','doing','down','during',
-    'each',
-    'few','for','from','further',
-    'had','has','have','having','he','her','here','hers','herself','him','himself','his','how',
-    'i','if','in','into','is','it','its','itself',
-    'me','more','most','my','myself',
-    'no','nor','not',
-    'of','off','on','once','only','or','other','ought','our','ours','ourselves','out','over','own',
-    'same','she','should','so','some','such',
-    'than','that','the','their','theirs','them','themselves','then','there','these','they','this','those','through','to',
-    'under','until','up',
-    'very',
-    'was','we','were','what','when','where','which','while','who','whom','why','with','would',
-    'you','your','yours','yourself','yourselves'
-}
 
-# Sample Corpus - data
+# a. Data Preparation
 data = [
-    "Artificial intelligence and machine learning are transforming the modern world.",
-    "Deep learning models can recognize images, understand speech, and generate text.",
-    "Natural language processing helps computers interact with humans intelligently.",
-    "Big data analytics helps in making better business decisions.",
-    "Cloud computing enables scalable and efficient AI processing."
+    "Natural Language Processing is a field of Artificial Intelligence.",
+    "Word embeddings help computers understand human language.",
+    "The CBOW model is a part of Word2Vec technique.",
+    "CBOW predicts the target word using surrounding context words.",
+    "Skip Gram is another architecture of Word2Vec.",
+    "Word2Vec is widely used in NLP applications.",
+    "Embedding layers in deep learning are used to represent words.",
+    "CBOW is faster and works better with frequent words."
 ]
 
-# Tokenization - 3
+
+# Convert sentences to sequences of word IDs
+
+# 2. Tokenize the text
+# Tokenizer converts each word into a unique integer ID.
 tokenizer = text.Tokenizer()
-tokenizer.fit_on_texts(
-    [[w.lower() for w in text.text_to_word_sequence(doc) if w.lower() not in stop_words] for doc in data]
-)
+tokenizer.fit_on_texts(data)
 
-# Mapping Each word to Integers - 3
+# 3. Build dictionaries
+# word2id maps each word to an integer
+# id2word maps each integer back to a word
 word2id = tokenizer.word_index
-word2id['PAD'] = 0
-id2word = {v : k for k , v in word2id.items()}
+word2id['PAD'] = 0                  # add padding token
+id2word = {v:k for k,v in word2id.items()}
+wids = [[word2id[w] for w in text.text_to_word_sequence(d)] for d in data]
 
-# Sentence to Sequence of Word IDs - 3
-wids = [
-    [word2id.get(w.lower(), word2id['PAD']) for w in text.text_to_word_sequence(doc) if w.lower() not in stop_words]
-    for doc in data
-]
-
-# 3+2
 vocab_size = len(word2id)
-embed_size = 100
+embed_size = 50
 window_size = 2
-print("Vocabulary Size:", vocab_size)
-print("Sample Vocabulary:", list(word2id.items())[:10])
 
-# Generate context word pairs
-def generate_context_word_pairs(corpus,window_size,vocab_size):
-    context_len = window_size * 2
-    for words in corpus:
-        for i, word in enumerate(words):
-            start, end = max(0,i-window_size),min(len(words),i+window_size+1)
-            context =[words[j] for j in range(start,end) if j!=i]
-            x = pad_sequences([context],maxlen=context_len)
-            y = to_categorical([word], vocab_size)
-            yield(x,y)
+# ----- b. Generate Training Data -----
+# Yield context-target pairs for CBOW
+def gen_data(corpus, win, vocab):
+    for sent in corpus:
+        for i, w in enumerate(sent):
+            ctx = [sent[j] for j in range(i-win, i+win+1) if j!=i and 0<=j<len(sent)]
+            x = pad_sequences([ctx], maxlen=win*2)  # pad context
+            y = to_categorical([w], vocab)          # one-hot target
+            yield (x, y)
 
-# Build Training Dataset
-i = 0
-for x,y in generate_context_word_pairs(wids,window_size,vocab_size):
-    if 0 not in x[0]:
-        print("Context (X): ", [id2word[w] for w in x[0]], " ->Target (Y):",id2word[np.argmax(y[0])])
-        i+=1
-        if i==5:
-            break
 
-X , Y = [], []
-for x, y in generate_context_word_pairs(wids,window_size,vocab_size):
-    X.append(x[0])
-    Y.append(y[0])
-
-X = np.array(X)
-Y = np.array(Y)
-
-print("Training Data Shape:", X.shape, Y.shape)
-
-# Define CBOW
-cbow = Sequential([
-    Input(shape=(window_size*2,)),
-    Embedding(input_dim = vocab_size, output_dim = embed_size),
-    Lambda(lambda x: K.mean(x,axis=1)),
-    Dense(vocab_size,activation='softmax')
+# ----- c. Build & Train Model -----
+# CBOW: Embedding -> Average -> Dense Softmax
+model = Sequential([
+    Embedding(vocab_size, embed_size, input_shape=(window_size*2,)),
+    Lambda(lambda x: K.mean(x, axis=1), output_shape=(embed_size,)),
+    Dense(vocab_size, activation='softmax')
 ])
-
-cbow.compile(loss='categorical_crossentropy',optimizer='adam')
-print(cbow.summary())
-
-# Model Training
-early_stop = EarlyStopping(monitor='loss', patience=3, restore_best_weights = True)
-cbow.fit(X,Y,epochs=50, batch_size=32, verbose=2,callbacks=[early_stop])
-
-# Extract Word Embedding 
-weights = cbow.get_weights()[0][1:len(id2word)]
-embeddings = pd.DataFrame(weights,index=[id2word[i] for i in range(1,len(id2word))])
-print(embeddings.head())
-
-# Similarity Query
-user_word = input("Enter a word to find similar words: ").strip().lower()
-if user_word in word2id:
-    similarity = cosine_similarity(weights)
-    idx = word2id[user_word]
-    similar_idxs = similarity[idx].argsort()[::-1][1:6]
-    similar_words = [id2word[i] for i in similar_idxs]
-    print(f"Top similar words to '{user_word}': {similar_words}")
-else:
-    print(f"'{user_word}' not found in vocabulary.")
+model.compile(loss='categorical_crossentropy', optimizer='adam')
 
 
+for epoch in range(5):
+    loss = sum(model.train_on_batch(x, y) for x, y in gen_data(wids, window_size, vocab_size))
+    print(f"Epoch {epoch+1}, Loss: {loss:.2f}")
+
+
+
+
+
+# ----- d. Output Embeddings & Similar Words -----
+# Extract embeddings (skip PAD)
+emb = model.get_weights()[0][1:]
+pd.DataFrame(emb, index=list(id2word.values())[1:]).head()
+
+# Take user input
+words = input("Enter words separated by space: ").lower().split()
+
+# Find top 5 similar words using Euclidean distance
+dist = euclidean_distances(emb)
+similar = {w: [id2word[i+1] for i in dist[word2id[w]-1].argsort()[1:6]] 
+           for w in words if w in word2id}
+
+print("Similar Words:", similar)
+
+
+
+
+                
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
